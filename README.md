@@ -1,27 +1,80 @@
-# Sign Post Rental Platform (Polished Version)
+require("dotenv").config()
+const express = require("express")
+const bodyParser = require("body-parser")
+const Stripe = require("stripe")
+const { Pool } = require("pg")
 
-Modern booking website for real estate sign post rentals.
+const app = express()
+const stripe = Stripe(process.env.STRIPE_SECRET || "sk_test_placeholder")
 
-## Install
+const db = new Pool({
+ connectionString: process.env.DATABASE_URL || "postgresql://postgres:postgres@localhost/signposts"
+})
 
-Install Node.js then run:
+app.use(express.static("public"))
+app.use(bodyParser.urlencoded({ extended: true }))
 
-npm install
+async function initDB(){
+await db.query(`
+CREATE TABLE IF NOT EXISTS bookings(
+id SERIAL PRIMARY KEY,
+name TEXT,
+email TEXT,
+address TEXT,
+post_color TEXT,
+rental_weeks INTEGER,
+install_date DATE,
+price INTEGER,
+created_at TIMESTAMP DEFAULT NOW()
+)
+`)
+}
 
-## Run
+initDB()
 
-npm start
+function priceForWeeks(w){
+if(w==1) return 3500
+if(w==2) return 5500
+if(w==4) return 9000
+if(w==8) return 15000
+return 3500
+}
 
-Visit:
+app.post("/checkout", async(req,res)=>{
 
-http://localhost:3000
+const {name,email,address,post_color,rental_weeks,install_date} = req.body
 
-## Deploy
+const price = priceForWeeks(rental_weeks)
 
-Upload to GitHub then deploy with:
+const session = await stripe.checkout.sessions.create({
 
-Render
-Railway
-Vercel (frontend)
+payment_method_types:["card"],
 
-Add your Stripe key to .env
+line_items:[{
+price_data:{
+currency:"cad",
+product_data:{name:"Sign Post Rental"},
+unit_amount:price
+},
+quantity:1
+}],
+
+mode:"payment",
+
+success_url:`${req.headers.origin}/success.html`,
+
+cancel_url:`${req.headers.origin}/book.html`,
+
+metadata:{
+name,email,address,post_color,rental_weeks,install_date
+}
+
+})
+
+res.redirect(303, session.url)
+
+})
+
+app.listen(process.env.PORT || 3000, ()=>{
+console.log("Server running")
+})

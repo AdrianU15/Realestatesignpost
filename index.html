@@ -1,0 +1,27 @@
+# Sign Post Rental Platform (Polished Version)
+
+Modern booking website for real estate sign post rentals.
+
+## Install
+
+Install Node.js then run:
+
+npm install
+
+## Run
+
+npm start
+
+Visit:
+
+http://localhost:3000
+
+## Deploy
+
+Upload to GitHub then deploy with:
+
+Render
+Railway
+Vercel (frontend)
+
+Add your Stripe key to .env
